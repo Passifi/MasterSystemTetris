@@ -31,10 +31,10 @@ init:
 	;initializing Variables to zero 
 	ld a,0
 	ld (PieceNo),a
-	ld (Counter),a   
+	ld (ticks),a   
 	ld (CurrentPiece),a
 	ld (RNGIndex),a 
-	ld (Counter+1),a
+	ld (ticks+1),a
 	ld (InputBuffer),a 
 
 	ld a,&03
@@ -55,10 +55,12 @@ init:
 	ld hl, PieceYPos
 	ld a, YPosStart
 	ld (hl),a 
-
-	; initialize Counter Boundary Level 0 equates to 40 What does that do ? 
+	ld hl, readInput
+	ld a, 0 
+	ld (hl), a 
+	; initialize ticks Boundary Level 0 equates to 40 What does that do ? 
 	ld a,LEVEL0 
-	ld (CounterBoundary), a
+	ld (TimeInterval), a
 	
 	; initialize the vdp 
 	call initializeVDP
@@ -87,7 +89,7 @@ main:
 	
 	jp main
 	
-int: 
+int: ; reminder this is the interrupt sequence so it gets executed on the interrupt 
 	di 
 	; ______________________________________________________
 	; controlBlock
@@ -96,32 +98,51 @@ int:
 	in a,(ControlRg) ; load in current state of controlRg
 	xor a,255 ; inverts the bits because 0 equals pressed ! 
 	cp 0 
-	jp z, noInput ; if a 0 goto noInput
+	jp z, Waiting ; if a 0 goto Waiting
+	push af 	
+		ld a,(readInput)
+		ld d,a 
+	pop af 
 	ld b,a 
 	ld a,(InputBuffer) ; load InputBuffer in a
 	and &F0 ;blank lower bits 
 	or b ; add b to input buffer 
 	ld (InputBuffer),a 
-	
-noInput: 	
-	ld a,(CounterBoundary)
-	ld d, a ; set d to Counterboundary 
-	; check whether counter has filled up
-	ld a, (counter)
-	inc a 
-	ld (counter),a 
-	or a ; reset carry 
-	ret nz
-	ld a,(counter+1)
-	inc a 
-	ld (counter+1),a 
-	cp d
-	ret nz
 
-	call controlPiece
+;************************************************************
+;The following issues with the waiting block and tetris is
+; that there are different timers needed for 
+; rendering new states
+; updating falling state
+; applying controlChanges 
+; it needs to be possible for a genuine tetris feeling to move the piece left, right and rotate it while it is NOT falling ! 
+; simple fix for this would be to only apply the higher level timer (comparison ticks+1 with TimeInterval ) for the actual falling 
+; and processing the logic for controller inputs and rerendering everytime the lowerbit of a rolls over 
+
+
+
+Waiting: 	
+	ld a,(TimeInterval)
+	ld d, a ; set d to TimeInterval 
+	; check whether ticks has filled up
+	ld a, (ticks)
+	inc a 
+	ld (ticks),a 
+	or a ; reset carry 
+	ret nz ; if a is not zero (no overflow we return)
+	; jp input, rerender 
+	 
+	call nz, controlPiece
+	ld a,(ticks+1)
+	inc a 
+	ld (ticks+1),a 
+	cp d
+	ret nz ; if a isn't equal to the timeinterval we return 
+
+	
 	
 	ld a,0
-	ld (counter+1),a
+	ld (ticks+1),a
 	ld a,(PieceYPos)
 	inc a 
 
@@ -132,9 +153,7 @@ noInput:
 	
 afterCollisionCheck:
 	ld (PieceYPos),a
-
 	call initTMap ; complete wipe of the tmpa
-
 	;call updatePieces
     ;call pickPiece
 	call setPiece
@@ -145,6 +164,9 @@ controlPiece:
 	
 	; problem sometimes registers two conescutive rights or left 
 	; check Right 
+	ld a, (readInput)
+	or a
+	ret z 
 	ld a,(InputBuffer)
 	and a,8
 	jp z, checkLeft 
@@ -556,16 +578,19 @@ RNGEnd:
 	org &c000
 VarStart:
 
+readInput:
+	db &00
+
 PieceXPos:
 	db &F1
 PieceYPos:
 	db &0A 
 PieceNo:
 	db &00 
-Counter:
+ticks:
 	db &00,&f0
 
-CounterBoundary:
+TimeInterval:
 	db 0
 
 CurrentPiece:

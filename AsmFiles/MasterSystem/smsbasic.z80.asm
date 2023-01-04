@@ -105,7 +105,7 @@ tmapLoop:
 	jp nz, tmapLoop
 	ret 
 	
-initializeTilemap: 
+initializeTilemap: ; fills the tilemap with tile 66 256 times and then tile 20 256 times 
 	ld bc, 512
 	ld hl, TileMap
 	call prepareVDP 

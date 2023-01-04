@@ -1,0 +1,3 @@
+Workout how the symbol files work and create script to automatically map variable names (and function names) to the symbol file then erase the symbol file 
+find out were to store listings and what to do with it
+Rewrite vasmSMS to a powershell script 
