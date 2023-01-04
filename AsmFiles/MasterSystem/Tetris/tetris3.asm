@@ -417,6 +417,7 @@ Square: ; style first db
 	db 0,1,1,1
 	db 0,0,1,0 
 	db 0,1,1,1
+	
 Line:
 	db 0,0,0,1
 	db 0,2,0,3
