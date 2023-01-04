@@ -55,7 +55,7 @@ init:
 	ld hl, PieceYPos
 	ld a, YPosStart
 	ld (hl),a 
-	ld hl, readInput
+	ld hl, b_registeredInput
 	ld a, 0 
 	ld (hl), a 
 	; initialize ticks Boundary Level 0 equates to 40 What does that do ? 
@@ -91,6 +91,10 @@ main:
 	
 int: ; reminder this is the interrupt sequence so it gets executed on the interrupt 
 	di 
+	in a,(&bf)
+	; reset input bool
+	ld a,0 
+	ld (b_registeredInput),a 
 	; ______________________________________________________
 	; controlBlock
 	;_______________________________________________________
@@ -98,11 +102,8 @@ int: ; reminder this is the interrupt sequence so it gets executed on the interr
 	in a,(ControlRg) ; load in current state of controlRg
 	xor a,255 ; inverts the bits because 0 equals pressed ! 
 	cp 0 
+
 	jp z, Waiting ; if a 0 goto Waiting
-	push af 	
-		ld a,(readInput)
-		ld d,a 
-	pop af 
 	ld b,a 
 	ld a,(InputBuffer) ; load InputBuffer in a
 	and &F0 ;blank lower bits 
@@ -132,7 +133,7 @@ Waiting:
 	ret nz ; if a is not zero (no overflow we return)
 	; jp input, rerender 
 	 
-	call nz, controlPiece
+	
 	ld a,(ticks+1)
 	inc a 
 	ld (ticks+1),a 
@@ -149,7 +150,7 @@ Waiting:
 	cp 20 ; did the piece hit the floor 
 	; here we need a check whether it hit other pieces
 	jp c, afterCollisionCheck ; if a is smaller than 20 we don't reset a
-	ld a,0
+	ld a,3
 	
 afterCollisionCheck:
 	ld (PieceYPos),a
@@ -164,7 +165,7 @@ controlPiece:
 	
 	; problem sometimes registers two conescutive rights or left 
 	; check Right 
-	ld a, (readInput)
+	ld a, (b_registeredInput)
 	or a
 	ret z 
 	ld a,(InputBuffer)
@@ -195,14 +196,6 @@ checkLeft:
 	ld (InputBuffer), a
 	ret 
 
-	
-
-
-
-
-
-
-
 pickPiece:
 	; randomly picks a piece and loads the pointer address into IX
 	ld a,(RNGIndex)
@@ -232,10 +225,7 @@ endLoopInc:
 	inc hl
 	ld a,(hl)
 	ld ixh,a
-	
 
-
-	
 setPiece: ; setPieceDef: loads in the currently saved x,y position and modifies them using the current PiecePointer data, so that the correct piece is rendered
 ; then converts the tileposition data, to values that make sense to the vdp and sends the data out
 
@@ -578,7 +568,7 @@ RNGEnd:
 	org &c000
 VarStart:
 
-readInput:
+b_registeredInput:
 	db &00
 
 PieceXPos:
