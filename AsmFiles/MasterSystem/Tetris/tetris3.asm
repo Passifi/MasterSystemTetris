@@ -3,7 +3,8 @@ YPosStart equ 5
 BlockSprite equ 4
 
 StartOffPlayArea equ $16
-LEVEL0 equ 40
+LEVEL0 equ 2
+ControlTimer equ 20
 
 	include "smsbasic.z80.asm"
 	
@@ -58,9 +59,9 @@ init:
 	ld hl, b_registeredInput
 	ld a, 0 
 	ld (hl), a 
-	; initialize ticks Boundary Level 0 equates to 40 What does that do ? 
 	ld a,LEVEL0 
 	ld (TimeInterval), a
+	ld (Timerflags_Music_Control_Logic),a 
 	
 	; initialize the vdp 
 	call initializeVDP
@@ -103,7 +104,7 @@ int: ; reminder this is the interrupt sequence so it gets executed on the interr
 	xor a,255 ; inverts the bits because 0 equals pressed ! 
 	cp 0 
 
-	jp z, Waiting ; if a 0 goto Waiting
+	jp z, TimingFun ; if a 0 goto TimingFun
 	ld b,a 
 	ld a,(InputBuffer) ; load InputBuffer in a
 	and &F0 ;blank lower bits 
@@ -111,7 +112,7 @@ int: ; reminder this is the interrupt sequence so it gets executed on the interr
 	ld (InputBuffer),a 
 
 ;************************************************************
-;The following issues with the waiting block and tetris is
+;The following issues with the TimingFun block and tetris is
 ; that there are different timers needed for 
 ; rendering new states
 ; updating falling state
@@ -122,28 +123,70 @@ int: ; reminder this is the interrupt sequence so it gets executed on the interr
 
 
 
-Waiting: 	
-	ld a,(TimeInterval)
-	ld d, a ; set d to TimeInterval 
-	; check whether ticks has filled up
-	ld a, (ticks)
-	inc a 
-	ld (ticks),a 
-	or a ; reset carry 
-	ret nz ; if a is not zero (no overflow we return)
-	; jp input, rerender 
-	 
-	
-	ld a,(ticks+1)
-	inc a 
-	ld (ticks+1),a 
-	cp d
-	ret nz ; if a isn't equal to the timeinterval we return 
+TimingFun: 	; set flags for the actual game code
+	push af 
+		ld a,0 
+		ld (Timerflags_Music_Control_Logic),a 
+		; check whether to execute control block 
+		ld a, ControlTimer
+		ld d, a ; set d to TimeInterval 
+		; check whether ticks has filled up
+		ld a, (ticks)
+		inc a 
+		ld (ticks),a 
+		or a 
+		cp d 
+		jp nz, LogicTest
+			
+			ld a, (Timerflags_Music_Control_Logic)
+			or 2 
+			ld (Timerflags_Music_Control_Logic),a 
 
-	
-	
-	ld a,0
-	ld (ticks+1),a
+LogicTest:
+		ld a,(TimeInterval)
+		ld d,a 
+		ld a,(ticks)
+		or a 
+		cp 20
+		jp nz, endOfTimingBlock
+			ld a,0
+			ld (ticks),a
+			ld a,(ticks+1)
+			inc a 
+			ld (ticks+1),a
+			or a 
+			cp d 
+			jp nz, endOfTimingBlock
+
+				ld a,(Timerflags_Music_Control_Logic)
+				or 4 
+				ld (Timerflags_Music_Control_Logic),a 
+				ld a,0
+				ld (ticks+1),a
+
+	 
+
+endOfTimingBlock:
+	pop af 
+; end of timing block
+
+;branching
+	ld a,(Timerflags_Music_Control_Logic)
+	ld b,a 
+	and 2 
+	cp 2
+	call z, controlPiece
+	ld a,(Timerflags_Music_Control_Logic)
+	or a 
+	and 4 
+	cp 4
+	call z, logicBlock 
+
+	ei 
+	ret 
+
+logicBlock:
+
 	ld a,(PieceYPos)
 	inc a 
 
@@ -158,16 +201,13 @@ afterCollisionCheck:
 	;call updatePieces
     ;call pickPiece
 	call setPiece
-	ei
 	ret 
 
 controlPiece:
 	
 	; problem sometimes registers two conescutive rights or left 
 	; check Right 
-	ld a, (b_registeredInput)
-	or a
-	ret z 
+	
 	ld a,(InputBuffer)
 	and a,8
 	jp z, checkLeft 
@@ -194,7 +234,7 @@ checkLeft:
 	ld (PieceXPos),a 
 	ld a,0 
 	ld (InputBuffer), a
-	ret 
+	ret  
 
 pickPiece:
 	; randomly picks a piece and loads the pointer address into IX
@@ -576,6 +616,8 @@ PieceXPos:
 	db &F1
 PieceYPos:
 	db &0A 
+Timerflags_Music_Control_Logic: ; last 3 bits indictate that either music, control, or logic need to be called 
+	db &00
 PieceNo:
 	db &00 
 ticks:
