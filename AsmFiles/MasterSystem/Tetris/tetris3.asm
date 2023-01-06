@@ -4,7 +4,7 @@ BlockSprite equ 4
 
 StartOffPlayArea equ $16
 LEVEL0 equ 2
-ControlTimer equ 20
+ControlTimer equ 10
 
 	include "smsbasic.z80.asm"
 	
@@ -37,10 +37,12 @@ init:
 	ld (RNGIndex),a 
 	ld (ticks+1),a
 	ld (InputBuffer),a 
-
-	ld a,&03
+	; don't understand why this is the second byte is always incremente by one! 
+	ld a,&ff
 	out (vdpControl),a
-	ld a,&3f 
+	nop 
+	nop
+	ld a,&3e 
 	out (vdpControl),a 
 	nop
 	nop
@@ -147,7 +149,7 @@ LogicTest:
 		ld d,a 
 		ld a,(ticks)
 		or a 
-		cp 20
+		cp 40
 		jp nz, endOfTimingBlock
 			ld a,0
 			ld (ticks),a
@@ -181,7 +183,7 @@ endOfTimingBlock:
 	and 4 
 	cp 4
 	call z, logicBlock 
-
+	
 	ei 
 	ret 
 
@@ -189,18 +191,19 @@ logicBlock:
 
 	ld a,(PieceYPos)
 	inc a 
-
+	ld (PieceYPos),a
 	cp 20 ; did the piece hit the floor 
 	; here we need a check whether it hit other pieces
 	jp c, afterCollisionCheck ; if a is smaller than 20 we don't reset a
 	ld a,3
-	
-afterCollisionCheck:
 	ld (PieceYPos),a
 	call initTMap ; complete wipe of the tmpa
 	;call updatePieces
     ;call pickPiece
 	call setPiece
+afterCollisionCheck:
+	
+	
 	ret 
 
 controlPiece:
@@ -221,6 +224,10 @@ controlPiece:
 	ld (PieceXPos),a 
 	ld a,0
 	ld (InputBuffer),a 
+	call initTMap ; complete wipe of the tmpa
+	;call updatePieces
+    ;call pickPiece
+	call setPiece
 	ret 
 checkLeft:
 	ld a,(InputBuffer)
@@ -234,6 +241,10 @@ checkLeft:
 	ld (PieceXPos),a 
 	ld a,0 
 	ld (InputBuffer), a
+	call initTMap ; complete wipe of the tmpa
+	;call updatePieces
+    ;call pickPiece
+	call setPiece
 	ret  
 
 pickPiece:
