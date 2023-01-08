@@ -37,7 +37,7 @@ init:
 	ld (RNGIndex),a 
 	ld (ticks+1),a
 	ld (InputBuffer),a 
-	; don't understand why this is the second byte is always incremente by one! 
+	; the byte address passed is always incremented by one... don't know why
 	ld a,&ff
 	out (vdpControl),a
 	nop 
@@ -123,8 +123,6 @@ int: ; reminder this is the interrupt sequence so it gets executed on the interr
 ; simple fix for this would be to only apply the higher level timer (comparison ticks+1 with TimeInterval ) for the actual falling 
 ; and processing the logic for controller inputs and rerendering everytime the lowerbit of a rolls over 
 
-
-
 TimingFun: 	; set flags for the actual game code
 	push af 
 		ld a,0 
@@ -165,8 +163,6 @@ LogicTest:
 				ld (Timerflags_Music_Control_Logic),a 
 				ld a,0
 				ld (ticks+1),a
-
-	 
 
 endOfTimingBlock:
 	pop af 
@@ -221,6 +217,11 @@ controlPiece:
 	ld a,(PieceXPos)
 	or a 
 	adc b 
+	or a 
+	cp &11
+	jp c, rightBoundOkay
+	ld a,&11
+rightBoundOkay:
 	ld (PieceXPos),a 
 	ld a,0
 	ld (InputBuffer),a 
@@ -238,6 +239,11 @@ checkLeft:
 	ld a,(PieceXPos)
 	or a 
 	sub b
+	or a 
+	cp &0A
+	jp nc, leftBoundOkay
+	ld a,&0A
+leftBoundOkay:
 	ld (PieceXPos),a 
 	ld a,0 
 	ld (InputBuffer), a

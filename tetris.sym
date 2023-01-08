@@ -1,6 +1,0 @@
-0000:0000 start
-0000:0080 initializiation
-0000:00BE mainloop
-0000:00C1 INT
-0000:0162 drawPiece
-
