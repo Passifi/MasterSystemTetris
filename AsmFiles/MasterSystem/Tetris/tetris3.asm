@@ -102,13 +102,9 @@ int: ; reminder this is the interrupt sequence so it gets executed on the interr
 	ld (ticks),a 
 	or a 
 	cp 0
+	call updatePSG
 	jp z, interuptReturn
-	ld a, Channel1FullVolume; turn channel 1 on 
-	out (PSG),a
-	ld a,%10001101
-	out (PSG),a 
-	ld a,%00110101sssssssssssssssssssssss 
-	out (PSG),a 
+	
 
 
 
@@ -118,6 +114,20 @@ interuptReturn:
 	
 
 	
+updatePSG:
+
+	ld hl,Soundbank
+	ld b,11
+updatePSGLoop:
+	ld a,(hl)
+	out (PSG),a 
+	inc hl 
+	ld a,b 
+	dec a 
+	ld b,a 
+	cp 0
+	jp nz, updatePSGLoop
+ret 
 
 
 
@@ -171,7 +181,20 @@ ZigZag1:
 ZigZag2:
 	db 1,0,2,0
 	db 0,1,1,1
-	
+
+Soundbank: 
+	db %10011111
+	db %10000000
+	db %00010000
+	db %10111111
+	db %10100111
+	db %00001101
+	db %11011111
+	db %11001010
+	db %00001010
+	db %11110000
+	db %11100011
+
 	
 Tiledata:
 	db &ff, &ff, &00, &00
