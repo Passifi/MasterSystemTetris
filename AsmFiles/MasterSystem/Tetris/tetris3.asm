@@ -1,7 +1,31 @@
 XPosStart equ 12
 YPosStart equ 5
 BlockSprite equ 4
-Channel1FullVolume equ %10010000 
+
+Channel1 equ %10010000 
+Channel2 equ %10110000 
+Channel3 equ %11010000 
+NoiseChannel equ %11110000 
+NoteOn equ &F0
+NoteOff equ &FF 
+
+;----------------------------------------------------------------------
+;Notes 
+;----------------------------------------------------------------------
+A_1 equ 256
+B_1 equ 228
+C_1 equ 215
+CSharp_1 equ 203 
+D_1 equ 191
+DSharp_1 equ 181 
+E_1 equ  170 
+F_1 equ 161 
+FSharp_1 equ 152 
+G_1 equ 143
+GSharp_1 equ 135
+A_2 equ 128 
+
+
 
 StartOffPlayArea equ $16
 LEVEL0 equ 2
@@ -33,6 +57,7 @@ init:
 	
 	;initializing Variables to zero 
 	ld a,0
+	ld (MelodyCounter),a
 	ld (PieceNo),a
 	ld (ticks),a   
 	ld (CurrentPiece),a
@@ -102,6 +127,25 @@ int: ; reminder this is the interrupt sequence so it gets executed on the interr
 	ld (ticks),a 
 	or a 
 	cp 0
+	ld a,(MelodyCounter)
+	ld b,a 
+	ld hl,Melody
+	ld a,l 
+	add b 
+	ld l,a 
+	ld a,(hl)
+	ld (Soundbank+1),a 
+	inc hl 
+	ld a,(hl)
+	ld (Soundbank+2),a 
+	ld a,b 
+	inc a
+	inc a 
+	ld (MelodyCounter),a 
+
+
+
+	
 	call updatePSG
 	jp z, interuptReturn
 	
@@ -182,19 +226,20 @@ ZigZag2:
 	db 1,0,2,0
 	db 0,1,1,1
 
-Soundbank: 
-	db %10011111
-	db %10000000
-	db %00010000
-	db %10111111
-	db %10100111
-	db %00001101
-	db %11011111
-	db %11001010
-	db %00001010
-	db %11110000
-	db %11100011
 
+
+Melody:
+	db &90
+	db &40
+	db &97
+	db &34
+	db &9A
+	db &28
+	db &90
+	db &40
+	db &91
+	db &28
+EndOfMelody:
 	
 Tiledata:
 	db &ff, &ff, &00, &00
@@ -311,6 +356,19 @@ RNGEnd:
 	org &c000
 VarStart:
 
+Soundbank: 
+	db %10010000
+	db %10000000
+	db %00010000
+	db %10111111
+	db %10100111
+	db %00001101
+	db %11011111
+	db %11001010
+	db %00001010
+	db %11111111
+	db %11100011
+
 b_registeredInput:
 	db &00
 
@@ -343,6 +401,9 @@ TmpY:
     db 00,00
 
 InputBuffer:
+	db 00
+
+MelodyCounter:
 	db 00
 
 VarEnd:
