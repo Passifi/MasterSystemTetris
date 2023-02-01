@@ -8,7 +8,7 @@ FirstChannelCtrl equ  &80
 SecondChannelCtrl equ  &80
 ThirdChannelCtrl equ  &80
 NoiseChannelCtrl equ &e0
-Stack equ &dff0
+Stack equ &d000
 SpriteAttribute equ &3f00
 VDPBorderColorReg equ &07
 VDPRasterLineINTReg equ 10 

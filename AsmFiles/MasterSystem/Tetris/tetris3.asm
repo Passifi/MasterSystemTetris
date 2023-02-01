@@ -57,7 +57,7 @@ init:
 	
 	;initializing Variables to zero 
 	ld a,0
-	ld (MelodyCounter),a
+	ld (MelodyIndex),a
 	ld (PieceNo),a
 	ld (ticks),a   
 	ld (CurrentPiece),a
@@ -79,6 +79,7 @@ init:
 	;** initialisation BLOCK #INIT **
 
 	;initializing piece Position variables
+	
 	ld hl, PieceXPos
 	ld a, XPosStart
 	ld (hl),a 
@@ -87,7 +88,14 @@ init:
 	ld (hl),a 
 	ld hl, b_registeredInput
 	ld a, 0 
-	ld (hl), a 
+	ld (hl), a
+initSoundLoop:
+	ld a,0
+	ld (hl),a 
+	inc hl
+	dec b 
+	cp b
+	jp nz, initSoundLoop
 	ld a,LEVEL0 
 	ld (TimeInterval), a
 	ld (Timerflags_Music_Control_Logic),a 
@@ -121,38 +129,26 @@ main:
 int: ; reminder this is the interrupt sequence so it gets executed on the interrupt 
 	di 
 	in a,(&bf)
+	; timing block 
+	ld bc, (TimeInterval) 
 	ld a,(ticks) ; make a macro for this 
-	
 	inc a 
-	ld (ticks),a 
-	or a 
-	cp 0
-	ld a,(MelodyCounter)
-	ld b,a 
-	ld hl,Melody
-	ld a,l 
-	add b 
-	ld l,a 
-	ld a,(hl)
-	ld (Soundbank+1),a 
-	inc hl 
-	ld a,(hl)
-	ld (Soundbank+2),a 
-	ld a,b 
-	inc a
-	inc a 
-	ld (MelodyCounter),a 
+	ld (ticks),a
+	cp c 
+	jp nz, returnPart
+	; ld a,(ticks+1)
+	; inc a
+	; ld (ticks+1),a 
+	; cp c 
+	; jp nz, returnPart
+	 
 
 
 
-	
-	call updatePSG
-	jp z, interuptReturn
-	
 
 
-
-interuptReturn: 
+	call readMelodyStream
+returnPart:
 	ei
 	ret 
 	
@@ -160,22 +156,58 @@ interuptReturn:
 	
 updatePSG:
 
-	ld hl,Soundbank
-	ld b,11
-updatePSGLoop:
+	
 	ld a,(hl)
 	out (PSG),a 
+	ret 
+;BIT b,r Test bit b from 8 bit register r and set the Z flag to that bit. 
+readMelodyStream: 
+	ld a,(MelodyIndex)
+	ld c,a 
+	ld b,0
+	ld hl, Melody 
+	add hl, bc 
+	call updatePSG
+	and &60 
+	cp &60 
+	jp nz,twoChannelByte
+oneChannelByte:
 	inc hl 
-	ld a,b 
-	dec a 
-	ld b,a 
-	cp 0
-	jp nz, updatePSGLoop
-ret 
+	inc c 
+	call updatePSG
+	jp setTimer
+
+twoChannelByte: 
+	inc hl 
+	inc c 
+	call updatePSG
+	inc hl 
+	inc c 
+	call updatePSG
+
+setTimer:
+	inc hl 
+	inc c 
+	ld a,(hl)
+	ld (TimeInterval),a
+	bit 7,a 
+	jp z, setTimer
+	inc c 
+	ld a,c
+	cp EndOfMelody - Melody ;reset a 
+	jp c, endLine
+	ld a, 0
+endLine:
+	ld (MelodyIndex),a 
+	ret 
+
+	
 
 
+	
 
 
+	
 
 PiecePointers:
 	dw Square, Line, Triangle, LRight, LLeft,ZigZag1,ZigZag2
@@ -229,16 +261,14 @@ ZigZag2:
 
 
 Melody:
-	db &90
-	db &40
-	db &97
-	db &34
-	db &9A
-	db &28
-	db &90
-	db &40
-	db &91
-	db &28
+	db &90 ; attunator
+	db &82 ; channelbyte
+	db &2f ; channelbyte
+	db &9f ; waitbyte ONE
+	db &90 ; attuonator
+	db &8e ; channelbyte
+	db &2f ; channelbyte
+	db &9f ; waitbyte
 EndOfMelody:
 	
 Tiledata:
@@ -356,18 +386,8 @@ RNGEnd:
 	org &c000
 VarStart:
 
-Soundbank: 
-	db %10010000
-	db %10000000
-	db %00010000
-	db %10111111
-	db %10100111
-	db %00001101
-	db %11011111
-	db %11001010
-	db %00001010
-	db %11111111
-	db %11100011
+TimerInterval: 
+	db &00, &00
 
 b_registeredInput:
 	db &00
@@ -403,7 +423,7 @@ TmpY:
 InputBuffer:
 	db 00
 
-MelodyCounter:
+MelodyIndex:
 	db 00
 
 VarEnd:
