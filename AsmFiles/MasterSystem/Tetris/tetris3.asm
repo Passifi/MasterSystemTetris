@@ -130,12 +130,15 @@ int: ; reminder this is the interrupt sequence so it gets executed on the interr
 	di 
 	in a,(&bf)
 	; timing block 
-	ld bc, (TimeInterval) 
+	ld a,(TimeInterval)
+	ld c, a 
 	ld a,(ticks) ; make a macro for this 
 	inc a 
 	ld (ticks),a
-	cp c 
+	cp c ; if a reaches Timeinterval play melody 
 	jp nz, returnPart
+	ld a,0
+	ld (ticks),a
 	; ld a,(ticks+1)
 	; inc a
 	; ld (ticks+1),a 
@@ -191,7 +194,7 @@ setTimer:
 	ld a,(hl)
 	ld (TimeInterval),a
 	bit 7,a 
-	jp z, setTimer
+	jp nz, setTimer
 	inc c 
 	ld a,c
 	cp EndOfMelody - Melody ;reset a 
@@ -261,14 +264,38 @@ ZigZag2:
 
 
 Melody:
-	db &90 ; attunator
-	db &82 ; channelbyte
-	db &2f ; channelbyte
-	db &9f ; waitbyte ONE
-	db &90 ; attuonator
-	db &8e ; channelbyte
-	db &2f ; channelbyte
-	db &9f ; waitbyte
+db &B0
+db &A0
+db &10
+db &01
+db &D0
+db &CF
+db &0B
+db &01
+db &90
+db &87
+db &0D
+db &0C
+db &95
+db &8A
+db &0A
+db &0E
+db &97
+db &8F
+db &08
+db &10
+db &9A
+db &81
+db &0A
+db &12
+db &95
+db &88
+db &09
+db &1E
+db &93
+db &80
+db &08
+db &0C
 EndOfMelody:
 	
 Tiledata:
