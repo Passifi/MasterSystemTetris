@@ -159,11 +159,49 @@ returnPart:
 	
 updatePSG:
 
-	
-	ld a,(hl)
-	out (PSG),a 
+	push af 
+		ld a,(hl)
+		out (PSG),a
+	pop af 
 	ret 
 ;BIT b,r Test bit b from 8 bit register r and set the Z flag to that bit. 
+SoundRoutine:
+	; loading in the control byte D3 Attunator D2 Frequency D1 Noise D0 Doulbe wait
+	ld a,(MelodyIndex)
+	ld c,a 
+	ld b,0 
+	ld hl, Melody
+	add hl, bc 
+	inc c 
+	inc hl  
+	ld (CurrentControlByte),(hl)
+	ld a,(CurrentControlByte)
+	bit 0, a 
+	ret z
+TestAttunator:
+	bit 3,a 
+	jp z, TestFrequency
+	; Attunator blocks
+	call updatePSG
+	inc hl
+	inc c 
+TestFrequency:
+	bit 2,a 
+	jp z, EndOfSoundRoutine
+	call updatePSG
+	inc hl 
+	inc c 
+	call updatePSG
+	
+
+EndOfSoundRoutine:
+	inc c 
+	ld a,c 
+	ld (MelodyIndex),a 
+	ret
+
+ReadMelody:
+	
 readMelodyStream: 
 	ld a,(MelodyIndex)
 	ld c,a 
@@ -412,6 +450,9 @@ RNGEnd:
 
 	org &c000
 VarStart:
+
+CurrentControlByte: 
+	db &00
 
 TimerInterval: 
 	db &00, &00

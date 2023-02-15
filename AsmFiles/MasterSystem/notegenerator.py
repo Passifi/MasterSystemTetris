@@ -1,3 +1,5 @@
+#todo read in midi file and transform into ms melody
+
 channels = {1: 0x80, 2:0xA0, 3: 0xC0, 'Noise':0xE0}
 
 notes = {
