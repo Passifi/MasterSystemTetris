@@ -59,10 +59,10 @@ init:
 	ld a,0
 	ld (MelodyIndex),a
 	ld (PieceNo),a
-	ld (ticks),a   
+	ld (music_ticks),a   
 	ld (CurrentPiece),a
 	ld (RNGIndex),a 
-	ld (ticks+1),a
+	ld (music_ticks+1),a
 	ld (InputBuffer),a 
 	; the byte address passed is always incremented by one... don't know why
 	ld a,&ff
@@ -80,15 +80,7 @@ init:
 
 	;initializing piece Position variables
 	
-	ld hl, PieceXPos
-	ld a, XPosStart
-	ld (hl),a 
-	ld hl, PieceYPos
-	ld a, YPosStart
-	ld (hl),a 
-	ld hl, b_registeredInput
-	ld a, 0 
-	ld (hl), a
+	
 initSoundLoop:
 	ld a,0
 	ld (hl),a 
@@ -97,7 +89,7 @@ initSoundLoop:
 	cp b
 	jp nz, initSoundLoop
 	ld a,LEVEL0 
-	ld (TimeInterval), a
+	ld (musicInterval), a
 	ld (Timerflags_Music_Control_Logic),a 
 	
 	; initialize the vdp 
@@ -128,30 +120,22 @@ main:
 	
 int: ; reminder this is the interrupt sequence so it gets executed on the interrupt 
 	di 
-	in a,(&bf)
+	in a,(&bf) 
 	; timing block 
-	ld a,(TimeInterval)
+	ld a,(musicInterval)
 	ld c, a 
-	ld a,(ticks) ; make a macro for this 
+	ld a,(music_ticks) ; make a macro for this 
 	inc a 
-	ld (ticks),a
-	cp c ; if a reaches Timeinterval play melody 
-	jp nz, returnPart
+	ld (music_ticks),a
+	cp c ; if a reaches musicInterval play melody 
+	jp nz, controlLogic
 	ld a,0
-	ld (ticks),a
-	; ld a,(ticks+1)
-	; inc a
-	; ld (ticks+1),a 
-	; cp c 
-	; jp nz, returnPart
-	 
-
-
-
-
-
+	ld (music_ticks),a
 	call readMelodyStream
-returnPart:
+controlLogic:
+	in a,(ControlRg)
+	ld (StoreInput),a 
+
 	ei
 	ret 
 	
@@ -174,8 +158,7 @@ SoundRoutine:
 	add hl, bc 
 	inc c 
 	inc hl  
-	ld (CurrentControlByte),(hl)
-	ld a,(CurrentControlByte)
+	ld a,(hl)
 	bit 0, a 
 	ret z
 TestAttunator:
@@ -230,7 +213,7 @@ setTimer:
 	inc hl 
 	inc c 
 	ld a,(hl)
-	ld (TimeInterval),a
+	ld (musicInterval),a
 	bit 7,a 
 	jp nz, setTimer
 	inc c 
@@ -302,38 +285,38 @@ ZigZag2:
 
 
 Melody:
-db &B0
-db &A0
-db &10
-db &01
-db &D0
-db &CF
-db &0B
-db &01
-db &90
-db &87
-db &0D
-db &0C
-db &95
-db &8A
-db &0A
-db &0E
-db &97
-db &8F
-db &08
-db &10
-db &9A
-db &81
-db &0A
-db &12
-db &95
-db &88
-db &09
-db &1E
-db &93
-db &80
-db &08
-db &0C
+	db &B0
+	db &A0
+	db &10
+	db &01
+	db &D0
+	db &CF
+	db &0B
+	db &01
+	db &90
+	db &87
+	db &0D
+	db &0C
+	db &95
+	db &8A
+	db &0A
+	db &0E
+	db &97
+	db &8F
+	db &08
+	db &10
+	db &9A
+	db &81
+	db &0A
+	db &12
+	db &95
+	db &88
+	db &09
+	db &1E
+	db &93
+	db &80
+	db &08
+	db &0C
 EndOfMelody:
 	
 Tiledata:
@@ -450,15 +433,15 @@ RNGEnd:
 
 	org &c000
 VarStart:
-
+StoreInput:
+	db &00
 CurrentControlByte: 
 	db &00
 
 TimerInterval: 
 	db &00, &00
 
-b_registeredInput:
-	db &00
+
 
 PieceXPos:
 	db &F1
@@ -468,10 +451,10 @@ Timerflags_Music_Control_Logic: ; last 3 bits indictate that either music, contr
 	db &00
 PieceNo:
 	db &00 
-ticks:
+music_ticks:
 	db &00,&f0
 
-TimeInterval:
+musicInterval:
 	db 0
 
 CurrentPiece:
